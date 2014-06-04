@@ -1,15 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <iostream>
 
 #include "../ISocketListener.h"
 #include "../EventManager.h"
 #include "../DebugLogs.h"
 
+using namespace std;
+
 main (int argc, char *argv[])
 {
 	if (argc !=3) {
-		DEBUG("No input Port Number and IP Address");
+		cout<<"No IP Address and Port Number - Exit";
 		exit(1);
 	}
 	
