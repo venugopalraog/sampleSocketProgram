@@ -85,6 +85,7 @@ void EventManager::ServerSocketListen(int server_fd) {
 	struct pollfd poll_fds[200];
 	int result = 0, new_sd = -1, no_of_fds = 1, current_size, conn_close, len;
 	char buffer[80];
+	ISocketListener *listener;
 
 	DEBUG("");
 
@@ -143,15 +144,10 @@ void EventManager::ServerSocketListen(int server_fd) {
 			}else {
 				DEBUG("Call procesEvents() to receive and send the result");
 				conn_close = FALSE;
-				conn_close = listener->processEvents(poll_fds[i].fd, POLLIN);
-				#if 0
-				for(int i = 0; i < Registered_Listeners.size(); i++) {
-					if (Registered_Listeners[i].fd == poll_fds[i].fd) { 
-						cout<<"Listener fd already exists Return";
-						Registered_Listeners[i].listener->processEvents(poll_fds[i].fd, POLLIN); 
-					}
+				if (isFdRegistered(server_fd, (ISocketListener **) &listener)) {
+					DEBUG("Found FD in Registered Listener call processEvents");
+					conn_close = listener->processEvents(poll_fds[i].fd, POLLIN);
 				}
-				#endif
 				if (conn_close) {
 					DEBUG("close the fd here");
 					close(poll_fds[i].fd);
@@ -238,6 +234,24 @@ void EventManager::createClientSocketHandler(int port_num, char ipAddress[]) {
 	}
 }
 
+int EventManager::isFdRegistered(int fd, ISocketListener **listener)
+{
+	DEBUG("Map Size:: %d", Registered_Listeners.size());
+	map<int, ISocketListener*>::const_iterator it;
+	it = Registered_Listeners.begin();
+	while (it != Registered_Listeners.end()) {
+		if (it->first ==  fd) {
+			if (listener != NULL) {
+				*listener = it->second;
+			}
+			DEBUG("FD is Registered already");
+			return TRUE;
+		}
+		it++;
+	}
+	return FALSE;
+}
+
 /********************************************************************************
  * Function Name : addListener
  * Description : Registers a socket listener
@@ -248,35 +262,24 @@ void EventManager::createClientSocketHandler(int port_num, char ipAddress[]) {
  ********************************************************************************/
 bool EventManager::addListener( int fd, short events, ISocketListener *socketListener) {
 	DEBUG("");
-	listener = socketListener;
-#if 0
-	int len = Registered_Listeners.size();
-	Listener temp;
-	for(int i = 0; i < len; i++) {
-		if (Registered_Listeners[i].fd == fd) { 
-			cout<<"Listener fd already exists Return";
-			return FALSE;
-		}
-	}
 
-	Registered_Listeners[len].fd = fd;
-	Registered_Listeners[len].listener = listener;
-#endif
+	if (!isFdRegistered(fd, NULL)) {
+		DEBUG("FD is not register--Register it");
+		Registered_Listeners.insert(make_pair(fd, socketListener));
+	}
 	return TRUE;
 }
 
 bool EventManager::removeListener( int fd, ISocketListener *listener ) { 
-	listener = NULL;
-	DEBUG("");
-#if 0
-	int len = Registered_Listeners.size();
-	for(int i = 0; i < len; i++) {
-		if (Registered_Listeners[i].fd == fd) { 
-			cout<<"Lister with fd is removed";
-			Registered_Listeners.erase(i);
-			return TRUE;
-		}
+	DEBUG("Map Size:: %d", Registered_Listeners.size());
+
+	map<int, ISocketListener*>::iterator it;
+	if (Registered_Listeners.count(fd)) {
+		DEBUG("Registered Key found Erase");
+		it=Registered_Listeners.find(fd);
+		Registered_Listeners.erase (it);
+		return TRUE;
 	}
-#endif
-	return TRUE;
+	DEBUG("Registered Key Not found");
+	return FALSE;
 }

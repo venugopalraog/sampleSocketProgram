@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <vector>
+#include <map>
 
 typedef struct SocketListener {
 	int fd;
@@ -13,9 +14,10 @@ typedef struct SocketListener {
 /// Class to handle file events and notify listeners
 /// This class needs to be fully implemented -- it is just a partial skeleton at the moment.
 class EventManager {
-	vector<Listener> Registered_Listeners;
+	//vector<Listener> Registered_Listeners;
+	map<int, ISocketListener *> Registered_Listeners;
 
-	ISocketListener *listener;
+	int isFdRegistered(int fd, ISocketListener **listener);
 	public:
 		EventManager();
 		~EventManager();
